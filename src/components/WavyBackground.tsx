@@ -14,9 +14,11 @@ interface Props {
   children?: React.ReactNode;
 }
 
+const DEFAULT_COLORS = ["#6B5CFF", "#3A4DFF", "#FF7AD9", "#FF8A6B", "#7EE0FF"] as const;
+
 export function WavyBackground({
   backgroundFill = "#1c1b1e",
-  colors = ["#6B5CFF", "#3A4DFF", "#FF7AD9", "#FF8A6B", "#7EE0FF"],
+  colors = DEFAULT_COLORS,
   waveWidth = 40,
   blur = 12,
   speed = "slow",
@@ -30,7 +32,8 @@ export function WavyBackground({
 
   // Ключевой фикс: строковый ключ не меняется, если значения цветов те же,
   // даже если массив создаётся заново на каждом render.
-  const colorsKey = useMemo(() => colors.join("|"), [colors.join("|")]);
+  const colorsKey = useMemo(() => colors.join("|"), [colors]);
+  const resolvedColors = useMemo(() => colorsKey.split("|"), [colorsKey]);
 
   const speedMul = useMemo(() => {
     switch (speed) {
@@ -141,8 +144,8 @@ export function WavyBackground({
       ctx.fillRect(0, 0, w, h);
 
       // 2) Ленты
-      for (let i = 0; i < colors.length; i++) {
-        drawRibbon(colors[i], i, colors.length, w, h);
+      for (let i = 0; i < resolvedColors.length; i++) {
+        drawRibbon(resolvedColors[i], i, resolvedColors.length, w, h);
       }
 
       // 3) time
@@ -158,8 +161,8 @@ export function WavyBackground({
       if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
     };
 
-    // colorsKey нужен, чтобы эффект перезапускался ТОЛЬКО когда реально поменялись значения цветов
-  }, [backgroundFill, blur, speedMul, waveOpacity, waveWidth, colorsKey]);
+    // colorsKey/resolvedColors нужны, чтобы эффект перезапускался только при реальном изменении цветов
+  }, [backgroundFill, blur, speedMul, waveOpacity, waveWidth, colorsKey, resolvedColors]);
 
   return (
     <div
