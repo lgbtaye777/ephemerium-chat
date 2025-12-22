@@ -14,7 +14,7 @@ interface Props {
   children?: React.ReactNode;
 }
 
-const DEFAULT_COLORS = ["#6B5CFF", "#3A4DFF", "#FF7AD9", "#FF8A6B", "#7EE0FF"] as const;
+const DEFAULT_COLORS: string[] = ["#6B5CFF", "#3A4DFF", "#FF7AD9", "#FF8A6B", "#7EE0FF"];
 
 export function WavyBackground({
   backgroundFill = "#1c1b1e",
