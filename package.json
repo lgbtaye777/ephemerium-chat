@@ -49,6 +49,7 @@
     ]
   },
   "devDependencies": {
-    "@types/chroma-js": "^3.1.2"
+    "@types/chroma-js": "^3.1.2",
+    "yaml": "^2.8.2"
   }
 }
