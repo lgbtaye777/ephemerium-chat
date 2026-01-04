@@ -103,7 +103,7 @@ export default function BubbleBackground({
       });
     }
     return res;
-  }, []);
+  }, [isSmallVp, prefersReducedMotion]);
 
   // Новая раскладка при смене layoutKey (и при resize)
   const layout = useMemo<BubblePos[]>(() => {
