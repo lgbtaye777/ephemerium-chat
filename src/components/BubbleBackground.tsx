@@ -45,6 +45,11 @@ function clamp(n: number, a: number, b: number) {
   return Math.max(a, Math.min(b, n));
 }
 
+const baseLayoutTransition = {
+  duration: 0.9,
+  ease: [0.2, 0, 0, 1] as [number, number, number, number],
+};
+
 export default function BubbleBackground({
   seedColor,
   layoutKey,
@@ -54,6 +59,11 @@ export default function BubbleBackground({
   layoutKey: string; // меняем при смене экрана
   interactive?: boolean;
 }) {
+  const prefersReducedMotion = useMemo(
+    () => window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false,
+    []
+  );
+
   // Размеры окна (для раскладки)
   const [vp, setVp] = useState(() => ({
     w: window.innerWidth || 1,
@@ -66,24 +76,39 @@ export default function BubbleBackground({
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  const isSmallVp = vp.w <= 640;
+  const allowInteractive = interactive && !prefersReducedMotion && !isSmallVp;
+
   // Статика пузырей (размер/blur/дрейф) — один раз
   const bubbles = useMemo<BubbleStatic[]>(() => {
-    const count = 10;
+    const isLite = prefersReducedMotion || isSmallVp;
+
+    const count = isLite ? 5 : 10;
     const res: BubbleStatic[] = [];
     for (let i = 0; i < count; i += 1) {
+      const sizeBase = isLite ? 420 : 520;
+      const sizeJitter = isLite ? 380 : 620;
+      const blurBase = isLite ? 12 : 18;
+      const blurJitter = isLite ? 14 : 22;
+      const opacityBase = isLite ? 0.14 : 0.18;
+      const opacityJitter = isLite ? 0.14 : 0.18;
+      const durBase = isLite ? 14 : 18;
+      const durJitter = isLite ? 12 : 16;
+      const driftScale = isLite ? 0.65 : 1;
+
       res.push({
         id: i,
-        size: 520 + Math.random() * 620, // 520..1140
-        blur: 18 + Math.random() * 22, // 18..40
-        opacity: 0.18 + Math.random() * 0.18, // 0.18..0.36
-        dur: 18 + Math.random() * 16, // 18..34
-        delay: Math.random() * 2.5,
-        driftX: -180 + Math.random() * 360,
-        driftY: -160 + Math.random() * 320,
+        size: sizeBase + Math.random() * sizeJitter, // 420..800 (lite) / 520..1140 (default)
+        blur: blurBase + Math.random() * blurJitter, // 12..26 (lite) / 18..40 (default)
+        opacity: opacityBase + Math.random() * opacityJitter, // 0.14..0.28 (lite) / 0.18..0.36 (default)
+        dur: durBase + Math.random() * durJitter, // 14..26 (lite) / 18..34 (default)
+        delay: Math.random() * (isLite ? 1.5 : 2.5),
+        driftX: (-180 + Math.random() * 360) * driftScale,
+        driftY: (-160 + Math.random() * 320) * driftScale,
       });
     }
     return res;
-  }, []);
+  }, [isSmallVp, prefersReducedMotion]);
 
   // Новая раскладка при смене layoutKey (и при resize)
   const layout = useMemo<BubblePos[]>(() => {
@@ -114,6 +139,17 @@ export default function BubbleBackground({
   }, [layoutKey, vp.w, vp.h, bubbles]);
 
   const { a, b } = useMemo(() => derivedAccents(seedColor), [seedColor]);
+  const baseGradients = useMemo(
+    () => ({
+      layers: `radial-gradient(1200px 900px at 20% 10%, ${chroma(a).alpha(0.18).css()}, transparent 55%),
+               radial-gradient(1100px 800px at 90% 30%, ${chroma(b).alpha(0.14).css()}, transparent 60%),
+               radial-gradient(900px 700px at 30% 90%, ${chroma(seedColor).alpha(0.12).css()}, transparent 55%)`,
+      g1: chroma(seedColor).alpha(0.55).css(),
+      g2: chroma(a).alpha(0.45).css(),
+      g3: chroma(b).alpha(0.4).css(),
+    }),
+    [a, b, seedColor]
+  );
 
   // Параллакс
   const mx = useMotionValue(0);
@@ -122,21 +158,16 @@ export default function BubbleBackground({
   const sy = useSpring(my, { stiffness: 90, damping: 22 });
 
   const onMove: React.MouseEventHandler<HTMLDivElement> = (e) => {
-    if (!interactive) return;
+    if (!allowInteractive) return;
     const w = vp.w || 1;
     const h = vp.h || 1;
-    const nx = (e.clientX / w - 0.5) * 30;
-    const ny = (e.clientY / h - 0.5) * 30;
+    const nx = (e.clientX / w - 0.5) * 24;
+    const ny = (e.clientY / h - 0.5) * 24;
     mx.set(nx);
     my.set(ny);
   };
 
   const base = "#1c1b1e";
-
-  const layoutTransition = {
-    duration: 0.9,
-    ease: [0.2, 0, 0, 1] as [number, number, number, number],
-  };
 
   return (
     <div
@@ -155,9 +186,7 @@ export default function BubbleBackground({
           style={{
             position: "absolute",
             inset: 0,
-            background: `radial-gradient(1200px 900px at 20% 10%, ${chroma(a).alpha(0.18).css()}, transparent 55%),
-                         radial-gradient(1100px 800px at 90% 30%, ${chroma(b).alpha(0.14).css()}, transparent 60%),
-                         radial-gradient(900px 700px at 30% 90%, ${chroma(seedColor).alpha(0.12).css()}, transparent 55%)`,
+            background: baseGradients.layers,
             filter: "blur(10px)",
           }}
         />
@@ -165,16 +194,12 @@ export default function BubbleBackground({
         {bubbles.map((bb, idx) => {
           const pos = layout[idx];
 
-          const g1 = chroma(seedColor).alpha(0.55).css();
-          const g2 = chroma(a).alpha(0.45).css();
-          const g3 = chroma(b).alpha(0.40).css();
-
           return (
             // OUTER: базовая позиция (меняется при смене layoutKey)
             <motion.div
               key={bb.id}
               animate={{ x: pos?.x ?? 0, y: pos?.y ?? 0 }}
-              transition={layoutTransition}
+              transition={baseLayoutTransition}
               style={{
                 position: "absolute",
                 left: "50%",
@@ -204,9 +229,9 @@ export default function BubbleBackground({
                   opacity: bb.opacity,
                   filter: `blur(${bb.blur}px)`,
                   mixBlendMode: "screen",
-                  background: `radial-gradient(circle at 30% 30%, ${g1}, transparent 62%),
-                               radial-gradient(circle at 70% 65%, ${g2}, transparent 64%),
-                               radial-gradient(circle at 60% 25%, ${g3}, transparent 66%)`,
+                  background: `radial-gradient(circle at 30% 30%, ${baseGradients.g1}, transparent 62%),
+                               radial-gradient(circle at 70% 65%, ${baseGradients.g2}, transparent 64%),
+                               radial-gradient(circle at 60% 25%, ${baseGradients.g3}, transparent 66%)`,
                 }}
               />
             </motion.div>
