@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import {
   CssBaseline,
   Box,
@@ -15,11 +15,6 @@ import {
 import { ThemeProvider } from "@mui/material/styles";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 
-import ScreenNickInput from "./components/ScreenNickInput";
-import ScreenWaitingPeer from "./components/ScreenWaitingPeer";
-import ScreenChat from "./components/ScreenChat";
-import ScreenSessionEnd from "./components/ScreenSessionEnd";
-import ScreenLanding from "./components/ScreenLanding";
 import HeroTitleMorph, { type Rect } from "./components/HeroTitleMorph";
 
 import { createEphemeralTheme, pickRandomPack, type ScreenKey, type ThemePack } from "./theme/theme";
@@ -50,6 +45,12 @@ const MOCK_BOT_RESPONSES = [
   "Обнови страничку, увидишь новую палитру",
   "Готов, когда ты готов нажать «Завершить».",
 ];
+
+const ScreenNickInput = lazy(() => import("./components/ScreenNickInput"));
+const ScreenWaitingPeer = lazy(() => import("./components/ScreenWaitingPeer"));
+const ScreenChat = lazy(() => import("./components/ScreenChat"));
+const ScreenSessionEnd = lazy(() => import("./components/ScreenSessionEnd"));
+const ScreenLanding = lazy(() => import("./components/ScreenLanding"));
 
 export default function App() {
   const [state, setState] = useState<EphemeralState>(initialState);
@@ -104,9 +105,10 @@ export default function App() {
   const outgoingProgress = outgoing ? Math.min(1, outgoingRemainingMs / REQUEST_TTL_MS) : 0;
 
   useEffect(() => {
+    if (!incoming && !outgoing) return undefined;
     const id = window.setInterval(() => setNowTick(Date.now()), 500);
     return () => window.clearInterval(id);
-  }, []);
+  }, [incoming, outgoing]);
 
   useEffect(() => {
     if (outgoing && outgoingRemainingMs <= 0) {
@@ -508,12 +510,14 @@ export default function App() {
       <LayoutGroup id="app" /* @ts-ignore */ inherit={false}>
         <AnimatePresence>
           {state.screen === "landing" && (
-            <ScreenLanding
-              key="landing"
-              onEnter={startLandingToNick}
-              titleRef={landingTitleRef}
-              hideTitle={morphActive}
-            />
+            <Suspense fallback={null}>
+              <ScreenLanding
+                key="landing"
+                onEnter={startLandingToNick}
+                titleRef={landingTitleRef}
+                hideTitle={morphActive}
+              />
+            </Suspense>
           )}
         </AnimatePresence>
 
@@ -555,45 +559,53 @@ export default function App() {
             >
               <AnimatePresence mode="wait">
                 {state.screen === "nickInput" && (
-                  <ScreenNickInput
-                    key="nickInput"
-                    onNext={handleNick}
-                    titleAnchorRef={targetTitleRef}
-                    hideTitle={morphActive}
-                  />
+                  <Suspense fallback={null}>
+                    <ScreenNickInput
+                      key="nickInput"
+                      onNext={handleNick}
+                      titleAnchorRef={targetTitleRef}
+                      hideTitle={morphActive}
+                    />
+                  </Suspense>
                 )}
 
                 {state.screen === "waitingPeer" && (
-                  <ScreenWaitingPeer
-                    key="waitingPeer"
-                    nickname={state.nickname}
-                    onConnect={handleConnect}
-                    onCancel={handleCancel}
-                    onTestMode={handleTestMode}
-                    isWaiting={isWaiting}
-                    targetNickname={targetNickname}
-                    waitingRemainingSec={outgoing ? Math.ceil(outgoingRemainingMs / 1000) : undefined}
-                    waitingProgress={outgoing ? outgoingProgress : undefined}
-                  />
+                  <Suspense fallback={null}>
+                    <ScreenWaitingPeer
+                      key="waitingPeer"
+                      nickname={state.nickname}
+                      onConnect={handleConnect}
+                      onCancel={handleCancel}
+                      onTestMode={handleTestMode}
+                      isWaiting={isWaiting}
+                      targetNickname={targetNickname}
+                      waitingRemainingSec={outgoing ? Math.ceil(outgoingRemainingMs / 1000) : undefined}
+                      waitingProgress={outgoing ? outgoingProgress : undefined}
+                    />
+                  </Suspense>
                 )}
 
                 {state.screen === "chat" && (
-                  <ScreenChat
-                    key="chat"
-                    nickname={state.nickname}
-                    peerNickname={state.peerNickname}
-                    messages={state.messages}
-                    onSend={handleSend}
-                    onLeave={handleLeave}
-                    peerOnline={peerOnline}
-                    wsConnected={ws.connected}
-                    isMockChat={mockMode.active}
-                    mockBotName={mockMode.botName}
-                  />
+                  <Suspense fallback={null}>
+                    <ScreenChat
+                      key="chat"
+                      nickname={state.nickname}
+                      peerNickname={state.peerNickname}
+                      messages={state.messages}
+                      onSend={handleSend}
+                      onLeave={handleLeave}
+                      peerOnline={peerOnline}
+                      wsConnected={ws.connected}
+                      isMockChat={mockMode.active}
+                      mockBotName={mockMode.botName}
+                    />
+                  </Suspense>
                 )}
 
                 {state.screen === "sessionEnd" && (
-                  <ScreenSessionEnd key="sessionEnd" onRestart={handleRestart} />
+                  <Suspense fallback={null}>
+                    <ScreenSessionEnd key="sessionEnd" onRestart={handleRestart} />
+                  </Suspense>
                 )}
               </AnimatePresence>
             </Box>

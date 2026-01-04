@@ -45,6 +45,11 @@ function clamp(n: number, a: number, b: number) {
   return Math.max(a, Math.min(b, n));
 }
 
+const baseLayoutTransition = {
+  duration: 0.9,
+  ease: [0.2, 0, 0, 1] as [number, number, number, number],
+};
+
 export default function BubbleBackground({
   seedColor,
   layoutKey,
@@ -134,6 +139,17 @@ export default function BubbleBackground({
   }, [layoutKey, vp.w, vp.h, bubbles]);
 
   const { a, b } = useMemo(() => derivedAccents(seedColor), [seedColor]);
+  const baseGradients = useMemo(
+    () => ({
+      layers: `radial-gradient(1200px 900px at 20% 10%, ${chroma(a).alpha(0.18).css()}, transparent 55%),
+               radial-gradient(1100px 800px at 90% 30%, ${chroma(b).alpha(0.14).css()}, transparent 60%),
+               radial-gradient(900px 700px at 30% 90%, ${chroma(seedColor).alpha(0.12).css()}, transparent 55%)`,
+      g1: chroma(seedColor).alpha(0.55).css(),
+      g2: chroma(a).alpha(0.45).css(),
+      g3: chroma(b).alpha(0.4).css(),
+    }),
+    [a, b, seedColor]
+  );
 
   // Параллакс
   const mx = useMotionValue(0);
@@ -145,18 +161,13 @@ export default function BubbleBackground({
     if (!allowInteractive) return;
     const w = vp.w || 1;
     const h = vp.h || 1;
-    const nx = (e.clientX / w - 0.5) * 30;
-    const ny = (e.clientY / h - 0.5) * 30;
+    const nx = (e.clientX / w - 0.5) * 24;
+    const ny = (e.clientY / h - 0.5) * 24;
     mx.set(nx);
     my.set(ny);
   };
 
   const base = "#1c1b1e";
-
-  const layoutTransition = {
-    duration: 0.9,
-    ease: [0.2, 0, 0, 1] as [number, number, number, number],
-  };
 
   return (
     <div
@@ -175,9 +186,7 @@ export default function BubbleBackground({
           style={{
             position: "absolute",
             inset: 0,
-            background: `radial-gradient(1200px 900px at 20% 10%, ${chroma(a).alpha(0.18).css()}, transparent 55%),
-                         radial-gradient(1100px 800px at 90% 30%, ${chroma(b).alpha(0.14).css()}, transparent 60%),
-                         radial-gradient(900px 700px at 30% 90%, ${chroma(seedColor).alpha(0.12).css()}, transparent 55%)`,
+            background: baseGradients.layers,
             filter: "blur(10px)",
           }}
         />
@@ -185,16 +194,12 @@ export default function BubbleBackground({
         {bubbles.map((bb, idx) => {
           const pos = layout[idx];
 
-          const g1 = chroma(seedColor).alpha(0.55).css();
-          const g2 = chroma(a).alpha(0.45).css();
-          const g3 = chroma(b).alpha(0.40).css();
-
           return (
             // OUTER: базовая позиция (меняется при смене layoutKey)
             <motion.div
               key={bb.id}
               animate={{ x: pos?.x ?? 0, y: pos?.y ?? 0 }}
-              transition={layoutTransition}
+              transition={baseLayoutTransition}
               style={{
                 position: "absolute",
                 left: "50%",
@@ -224,9 +229,9 @@ export default function BubbleBackground({
                   opacity: bb.opacity,
                   filter: `blur(${bb.blur}px)`,
                   mixBlendMode: "screen",
-                  background: `radial-gradient(circle at 30% 30%, ${g1}, transparent 62%),
-                               radial-gradient(circle at 70% 65%, ${g2}, transparent 64%),
-                               radial-gradient(circle at 60% 25%, ${g3}, transparent 66%)`,
+                  background: `radial-gradient(circle at 30% 30%, ${baseGradients.g1}, transparent 62%),
+                               radial-gradient(circle at 70% 65%, ${baseGradients.g2}, transparent 64%),
+                               radial-gradient(circle at 60% 25%, ${baseGradients.g3}, transparent 66%)`,
                 }}
               />
             </motion.div>
