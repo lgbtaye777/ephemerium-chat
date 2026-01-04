@@ -54,6 +54,11 @@ export default function BubbleBackground({
   layoutKey: string; // меняем при смене экрана
   interactive?: boolean;
 }) {
+  const prefersReducedMotion = useMemo(
+    () => window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false,
+    []
+  );
+
   // Размеры окна (для раскладки)
   const [vp, setVp] = useState(() => ({
     w: window.innerWidth || 1,
@@ -66,24 +71,39 @@ export default function BubbleBackground({
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  const isSmallVp = vp.w <= 640;
+  const allowInteractive = interactive && !prefersReducedMotion && !isSmallVp;
+
   // Статика пузырей (размер/blur/дрейф) — один раз
   const bubbles = useMemo<BubbleStatic[]>(() => {
-    const count = 10;
+    const isLite = prefersReducedMotion || isSmallVp;
+
+    const count = isLite ? 5 : 10;
     const res: BubbleStatic[] = [];
     for (let i = 0; i < count; i += 1) {
+      const sizeBase = isLite ? 420 : 520;
+      const sizeJitter = isLite ? 380 : 620;
+      const blurBase = isLite ? 12 : 18;
+      const blurJitter = isLite ? 14 : 22;
+      const opacityBase = isLite ? 0.14 : 0.18;
+      const opacityJitter = isLite ? 0.14 : 0.18;
+      const durBase = isLite ? 14 : 18;
+      const durJitter = isLite ? 12 : 16;
+      const driftScale = isLite ? 0.65 : 1;
+
       res.push({
         id: i,
-        size: 520 + Math.random() * 620, // 520..1140
-        blur: 18 + Math.random() * 22, // 18..40
-        opacity: 0.18 + Math.random() * 0.18, // 0.18..0.36
-        dur: 18 + Math.random() * 16, // 18..34
-        delay: Math.random() * 2.5,
-        driftX: -180 + Math.random() * 360,
-        driftY: -160 + Math.random() * 320,
+        size: sizeBase + Math.random() * sizeJitter, // 420..800 (lite) / 520..1140 (default)
+        blur: blurBase + Math.random() * blurJitter, // 12..26 (lite) / 18..40 (default)
+        opacity: opacityBase + Math.random() * opacityJitter, // 0.14..0.28 (lite) / 0.18..0.36 (default)
+        dur: durBase + Math.random() * durJitter, // 14..26 (lite) / 18..34 (default)
+        delay: Math.random() * (isLite ? 1.5 : 2.5),
+        driftX: (-180 + Math.random() * 360) * driftScale,
+        driftY: (-160 + Math.random() * 320) * driftScale,
       });
     }
     return res;
-  }, []);
+  }, [isSmallVp, prefersReducedMotion]);
 
   // Новая раскладка при смене layoutKey (и при resize)
   const layout = useMemo<BubblePos[]>(() => {
@@ -122,7 +142,7 @@ export default function BubbleBackground({
   const sy = useSpring(my, { stiffness: 90, damping: 22 });
 
   const onMove: React.MouseEventHandler<HTMLDivElement> = (e) => {
-    if (!interactive) return;
+    if (!allowInteractive) return;
     const w = vp.w || 1;
     const h = vp.h || 1;
     const nx = (e.clientX / w - 0.5) * 30;

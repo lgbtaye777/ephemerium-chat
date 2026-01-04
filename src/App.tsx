@@ -104,7 +104,7 @@ export default function App() {
   const outgoingProgress = outgoing ? Math.min(1, outgoingRemainingMs / REQUEST_TTL_MS) : 0;
 
   useEffect(() => {
-    const id = window.setInterval(() => setNowTick(Date.now()), 200);
+    const id = window.setInterval(() => setNowTick(Date.now()), 500);
     return () => window.clearInterval(id);
   }, []);
 

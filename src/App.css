@@ -54,6 +54,13 @@ body {
   backdrop-filter: blur(22px) saturate(160%);
 }
 
+@media (max-width: 600px) {
+  .glass-surface {
+    -webkit-backdrop-filter: blur(12px) saturate(130%);
+    backdrop-filter: blur(12px) saturate(130%);
+  }
+}
+
 .app-shell {
   width: var(--shell-width);
   height: var(--shell-height);
