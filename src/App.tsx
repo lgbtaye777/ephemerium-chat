@@ -33,7 +33,7 @@ const initialState: EphemeralState = {
 };
 
 const REQUEST_TTL_MS = 60_000;
-const MOCK_BOT_NAMES = ["MotyaBOT1", "LGBTAUE777BOT", "FedurinBOT", "triplesixgodzxBOT", "NmethylamineBOT"];
+const MOCK_BOT_NAMES = ["ZaitcevaBOT"];
 const MOCK_BOT_RESPONSES = [
   "Привет! Я тестовый бот Ephemerium 🙌",
   "Я здесь, чтобы показать, как выглядит чат. Подеграй окошки и тумблеры, почувствуй этот импакт",
